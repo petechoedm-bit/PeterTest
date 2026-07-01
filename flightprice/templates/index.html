@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>機票比價</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 1.4rem; }
+    form { display: grid; gap: 12px; }
+    label { display: flex; flex-direction: column; font-size: 0.9rem; gap: 4px; }
+    input[type="text"], input[type="date"], input[type="number"] {
+      box-sizing: border-box; width: 100%;
+      padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; }
+    .row label { min-width: 0; }
+    .checkbox { flex-direction: row; align-items: center; gap: 8px; }
+    button { padding: 10px; font-size: 1rem; border: none; border-radius: 4px; background: #2563eb; color: white; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .error { color: #b91c1c; background: #fee2e2; padding: 8px 12px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>✈️ 機票比價</h1>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post">
+    <div class="row">
+      <label>出發地 IATA 代碼
+        <input type="text" name="origin" placeholder="TPE" required maxlength="4">
+      </label>
+      <label>目的地 IATA 代碼
+        <input type="text" name="destination" placeholder="NRT" required maxlength="4">
+      </label>
+    </div>
+    <div class="row">
+      <label>去程日期
+        <input type="date" name="depart_date" required>
+      </label>
+      <label>回程日期（單程留空）
+        <input type="date" name="return_date">
+      </label>
+    </div>
+    <div class="row">
+      <label>人數
+        <input type="number" name="adults" value="1" min="1">
+      </label>
+      <label>幣別
+        <input type="text" name="currency" value="TWD" maxlength="3">
+      </label>
+    </div>
+    <label class="checkbox" style="flex-direction: row;">
+      <input type="checkbox" name="non_stop" value="1"> 只看直飛
+    </label>
+    <button type="submit">查詢</button>
+  </form>
+</body>
+</html>

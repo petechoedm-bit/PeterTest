@@ -4,7 +4,7 @@
 
 - **可自訂搜尋** — 出發地、目的地、日期、人數、幣別、是否直飛全部自訂
 - **多來源比價** — 抽象化的 provider 介面，一次查詢所有來源，由便宜到貴排序
-- **即時查詢** — `search` 指令，馬上查、馬上比
+- **即時查詢** — `search` 指令或 `web` 網頁介面，馬上查、馬上比
 - **定時監控** — `monitor` 指令，依設定的間隔自動查價，低於目標價就通知
 - **價格歷史** — SQLite 記錄每次查價，顯示與上次比較的漲跌趨勢
 - **免申請即可試用** — 沒有 API key 時自動用 Demo 模式產生擬真資料，整套流程都能跑
@@ -38,6 +38,16 @@ TPE → NRT  2026-07-20 / 2026-07-27  (round-trip, 2 pax)
 Cheapest: 15840 TWD via demo (Jetstar Japan)
 ```
 
+## 網頁介面
+
+不想打指令的話，用瀏覽器查：
+
+```bash
+python -m flightprice web
+```
+
+開啟 <http://127.0.0.1:5000/>，填表單送出即可看到比價結果（只在本機開放，不對外）。
+
 ## 定時監控 + 降價通知
 
 1. 複製設定檔並填入你要盯的航線與目標價：
@@ -55,19 +65,26 @@ Cheapest: 15840 TWD via demo (Jetstar Japan)
 
 當最低價 ≤ `max_price` 時會發出通知。設定了 SMTP 就寄 email，否則印在終端機。
 
-## 使用真實資料（Amadeus）
+## 使用真實資料
 
-Demo 模式免申請即可用。想接真實航班資料：
+Demo 模式免申請即可用。想接真實航班資料，複製 `.env.example` 為 `.env` 後填入以下任一（或兩者都填，會同時查詢比價）：
 
-1. 到 <https://developers.amadeus.com/> 免費申請，取得 API Key / Secret
-2. 複製 `.env.example` 為 `.env` 並填入：
+**Skyscanner**（推薦，Amadeus Self-Service 已於 2026-07-17 關閉）
 
-   ```bash
-   cp .env.example .env
-   # 編輯 .env，填 AMADEUS_CLIENT_ID / AMADEUS_CLIENT_SECRET
-   ```
+到 <https://rapidapi.com/apiheya/api/sky-scrapper> 訂閱 BASIC 免費方案（不需信用卡，20 次/月），取得 RapidAPI Key 後填入：
 
-偵測到憑證後會自動改用 Amadeus，否則維持 Demo 模式。
+```bash
+SKYSCANNER_RAPIDAPI_KEY=你的_key
+```
+
+**Amadeus**（已停用，僅供既有憑證參考）
+
+```bash
+AMADEUS_CLIENT_ID=
+AMADEUS_CLIENT_SECRET=
+```
+
+偵測到任一憑證後會自動啟用對應來源，都沒填就維持 Demo 模式。
 
 ## 專案結構
 
@@ -79,10 +96,13 @@ flightprice/
   notify.py            # Email / console 通知
   config.py            # .env 與 watches.yaml 載入
   monitor.py           # 排程監控 + 門檻警示
-  cli.py               # search / monitor 指令
+  cli.py               # search / monitor / web 指令
+  webapp.py            # 本機網頁介面（Flask）
+  templates/           # 網頁介面的 HTML
   providers/
     base.py            # FlightProvider 抽象介面
-    amadeus.py         # Amadeus 真實資料
+    amadeus.py         # Amadeus 真實資料（已停用）
+    skyscanner.py       # Skyscanner 真實資料（Sky Scrapper RapidAPI）
     demo.py            # 離線擬真資料
 tests/
   test_flightprice.py
@@ -91,7 +111,7 @@ tests/
 ## 新增資料來源
 
 繼承 `FlightProvider`、實作 `search()`，再加進 `providers/__init__.py` 的
-`build_providers()` 即可（例如 Skyscanner、Kiwi）。
+`build_providers()` 即可（例如 Kiwi）。
 
 ## 測試
 

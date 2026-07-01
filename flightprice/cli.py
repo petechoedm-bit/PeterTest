@@ -42,6 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
     monitor.add_argument(
         "--once", action="store_true", help="Run one check and exit"
     )
+
+    sub.add_parser("web", help="Launch the local web UI at http://127.0.0.1:5000")
     return parser
 
 
@@ -103,6 +105,11 @@ def main(argv: List[str] | None = None) -> int:
         return _run_search(args)
     if args.command == "monitor":
         return _run_monitor(args)
+    if args.command == "web":
+        from .webapp import app
+
+        app.run(host="127.0.0.1", port=5000)
+        return 0
     return 2
 
 
