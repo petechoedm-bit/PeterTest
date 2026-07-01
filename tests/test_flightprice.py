@@ -6,12 +6,15 @@ import os
 import tempfile
 import unittest
 from datetime import datetime
+from unittest.mock import Mock, patch
 
 from flightprice.compare import compare
 from flightprice.config import MonitorConfig, Watch
 from flightprice.models import PriceObservation, SearchQuery
 from flightprice.monitor import Monitor
+from flightprice.providers.base import ProviderError
 from flightprice.providers.demo import DemoProvider
+from flightprice.providers.skyscanner import SkyscannerProvider
 from flightprice.storage import PriceStore
 
 
@@ -52,6 +55,88 @@ class DemoProviderTests(unittest.TestCase):
         ow = p.search(SearchQuery("TPE", "NRT", "2026-07-20"))
         rt = p.search(SearchQuery("TPE", "NRT", "2026-07-20", "2026-07-27"))
         self.assertLess(ow[0].price, rt[0].price)
+
+
+def _airport_search_response(sky_id: str, entity_id: str) -> dict:
+    return {
+        "status": True,
+        "data": [
+            {
+                "navigation": {
+                    "relevantFlightParams": {
+                        "skyId": sky_id,
+                        "entityId": entity_id,
+                        "flightPlaceType": "AIRPORT",
+                    }
+                }
+            }
+        ],
+    }
+
+_SEARCH_FLIGHTS_RESPONSE = {
+    "status": True,
+    "data": {
+        "context": {"status": "complete"},
+        "itineraries": [
+            {
+                "price": {"raw": 200.66, "formatted": "$201"},
+                "legs": [
+                    {
+                        "segments": [
+                            {
+                                "origin": {"displayCode": "TPE"},
+                                "destination": {"displayCode": "NRT"},
+                                "departure": "2026-08-15T06:35:00",
+                                "arrival": "2026-08-15T11:00:00",
+                                "flightNumber": "200",
+                                "marketingCarrier": {
+                                    "name": "Tigerair Taiwan",
+                                    "alternateId": "IT",
+                                },
+                            }
+                        ]
+                    }
+                ],
+            }
+        ],
+    },
+}
+
+
+class SkyscannerProviderTests(unittest.TestCase):
+    def test_missing_credentials_raise(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(ProviderError):
+                SkyscannerProvider()
+
+    def test_search_resolves_airports_and_parses_offers(self):
+        provider = SkyscannerProvider(api_key="test-key")
+        query = SearchQuery("TPE", "NRT", "2026-08-15")
+
+        with patch("flightprice.providers.skyscanner.requests.get") as get:
+            get.side_effect = [
+                Mock(status_code=200, json=lambda: _airport_search_response("TPE", "128667054")),
+                Mock(status_code=200, json=lambda: _airport_search_response("NRT", "128668889")),
+                Mock(status_code=200, json=lambda: _SEARCH_FLIGHTS_RESPONSE),
+            ]
+            offers = provider.search(query)
+
+        self.assertEqual(len(offers), 1)
+        offer = offers[0]
+        self.assertEqual(offer.provider, "skyscanner")
+        self.assertEqual(offer.price, 200.66)
+        self.assertEqual(offer.currency, "TWD")
+        self.assertEqual(len(offer.segments), 1)
+        self.assertEqual(offer.segments[0].flight_number, "IT200")
+
+    def test_search_raises_on_http_error(self):
+        provider = SkyscannerProvider(api_key="test-key")
+        query = SearchQuery("TPE", "NRT", "2026-08-15")
+
+        with patch("flightprice.providers.skyscanner.requests.get") as get:
+            get.return_value = Mock(status_code=401, text="unauthorized")
+            with self.assertRaises(ProviderError):
+                provider.search(query)
 
 
 class CompareTests(unittest.TestCase):

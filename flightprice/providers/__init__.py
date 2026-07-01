@@ -13,18 +13,22 @@ from typing import List
 from .base import FlightProvider
 from .amadeus import AmadeusProvider
 from .demo import DemoProvider
+from .skyscanner import SkyscannerProvider
 
 
 def build_providers() -> List[FlightProvider]:
     """Return the providers usable with the current environment.
 
-    Uses Amadeus when credentials are present, otherwise falls back to the
-    offline Demo provider so the tool always returns something runnable.
+    Enables every real provider that has credentials configured (so results
+    can be compared across sources), falling back to the offline Demo
+    provider only when none are configured.
     """
 
     providers: List[FlightProvider] = []
     if os.getenv("AMADEUS_CLIENT_ID") and os.getenv("AMADEUS_CLIENT_SECRET"):
         providers.append(AmadeusProvider())
+    if os.getenv("SKYSCANNER_RAPIDAPI_KEY"):
+        providers.append(SkyscannerProvider())
     if not providers:
         providers.append(DemoProvider())
     return providers
@@ -33,6 +37,7 @@ def build_providers() -> List[FlightProvider]:
 __all__ = [
     "FlightProvider",
     "AmadeusProvider",
+    "SkyscannerProvider",
     "DemoProvider",
     "build_providers",
 ]
