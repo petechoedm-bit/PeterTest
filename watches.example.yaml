@@ -1,0 +1,24 @@
+# Price watches for scheduled monitoring.
+# Each watch is a search that runs on an interval; an alert fires when the
+# cheapest offer is at or below `max_price` (in the currency you request).
+
+check_interval_minutes: 60
+
+watches:
+  - name: "台北 → 東京 暑假"
+    origin: TPE
+    destination: NRT
+    depart_date: "2026-07-20"
+    return_date: "2026-07-27"
+    adults: 1
+    currency: TWD
+    max_price: 15000
+
+  - name: "台北 → 大阪 週末快閃"
+    origin: TPE
+    destination: KIX
+    depart_date: "2026-08-15"
+    return_date: "2026-08-17"
+    adults: 2
+    currency: TWD
+    max_price: 12000
