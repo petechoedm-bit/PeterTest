@@ -96,8 +96,9 @@ class SkyscannerProvider(FlightProvider):
             price = (itin.get("price") or {}).get("raw")
             if price is None:
                 continue
+            legs = itin.get("legs", [])
             segments: List[Segment] = []
-            for leg in itin.get("legs", []):
+            for leg in legs:
                 for seg in leg.get("segments", []):
                     carrier = seg.get("marketingCarrier", {})
                     segments.append(
@@ -110,12 +111,25 @@ class SkyscannerProvider(FlightProvider):
                             arrival=seg.get("arrival", ""),
                         )
                     )
+
+            fare_policy_raw = itin.get("farePolicy") or {}
+            eco = itin.get("eco") or {}
             offers.append(
                 FlightOffer(
                     provider=self.name,
                     price=float(price),
                     currency=currency,
                     segments=segments,
+                    duration_minutes=sum(leg.get("durationInMinutes") or 0 for leg in legs) or None,
+                    stop_count=sum(leg.get("stopCount") or 0 for leg in legs),
+                    self_transfer=itin.get("isSelfTransfer"),
+                    tags=itin.get("tags") or [],
+                    fare_policy={
+                        "changeAllowed": bool(fare_policy_raw.get("isChangeAllowed")),
+                        "cancellationAllowed": bool(fare_policy_raw.get("isCancellationAllowed")),
+                        "partiallyRefundable": bool(fare_policy_raw.get("isPartiallyRefundable")),
+                    } if fare_policy_raw else None,
+                    eco_delta_pct=eco.get("ecoContenderDelta"),
                 )
             )
         return offers

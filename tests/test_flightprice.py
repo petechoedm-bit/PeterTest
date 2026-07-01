@@ -82,6 +82,8 @@ _SEARCH_FLIGHTS_RESPONSE = {
                 "price": {"raw": 200.66, "formatted": "$201"},
                 "legs": [
                     {
+                        "durationInMinutes": 205,
+                        "stopCount": 0,
                         "segments": [
                             {
                                 "origin": {"displayCode": "TPE"},
@@ -97,6 +99,15 @@ _SEARCH_FLIGHTS_RESPONSE = {
                         ]
                     }
                 ],
+                "isSelfTransfer": False,
+                "tags": ["cheapest"],
+                "farePolicy": {
+                    "isChangeAllowed": False,
+                    "isPartiallyChangeable": False,
+                    "isCancellationAllowed": False,
+                    "isPartiallyRefundable": False,
+                },
+                "eco": {"ecoContenderDelta": 20.2},
             }
         ],
     },
@@ -128,6 +139,16 @@ class SkyscannerProviderTests(unittest.TestCase):
         self.assertEqual(offer.currency, "TWD")
         self.assertEqual(len(offer.segments), 1)
         self.assertEqual(offer.segments[0].flight_number, "IT200")
+        self.assertEqual(offer.duration_minutes, 205)
+        self.assertEqual(offer.stop_count, 0)
+        self.assertEqual(offer.self_transfer, False)
+        self.assertEqual(offer.tags, ["cheapest"])
+        self.assertEqual(offer.fare_policy, {
+            "changeAllowed": False,
+            "cancellationAllowed": False,
+            "partiallyRefundable": False,
+        })
+        self.assertEqual(offer.eco_delta_pct, 20.2)
 
     def test_search_raises_on_http_error(self):
         provider = SkyscannerProvider(api_key="test-key")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -62,13 +62,25 @@ class Segment:
 
 @dataclass(frozen=True)
 class FlightOffer:
-    """A priced itinerary returned by a provider."""
+    """A priced itinerary returned by a provider.
+
+    ``duration_minutes``, ``stop_count``, ``self_transfer``, ``tags``,
+    ``fare_policy`` and ``eco_delta_pct`` are itinerary-level extras that not
+    every provider can supply (Skyscanner does, Demo/Amadeus don't); they
+    default to "unknown" rather than forcing every provider to fake them.
+    """
 
     provider: str
     price: float
     currency: str
     segments: List[Segment] = field(default_factory=list)
     booking_url: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    stop_count: Optional[int] = None
+    self_transfer: Optional[bool] = None
+    tags: List[str] = field(default_factory=list)
+    fare_policy: Optional[Dict[str, bool]] = None
+    eco_delta_pct: Optional[float] = None
 
     @property
     def carriers(self) -> List[str]:

@@ -7,11 +7,27 @@
     body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #222; }
     h1 { font-size: 1.4rem; }
     .meta { color: #555; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
-    th { font-size: 0.85rem; color: #666; }
-    tr.cheapest { background: #ecfdf5; }
-    .price { font-weight: 600; }
+    .offer {
+      border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;
+    }
+    .offer.cheapest { background: #ecfdf5; border-color: #a7f3d0; }
+    .offer-header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+    .price { font-size: 1.15rem; font-weight: 700; }
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #eff6ff; color: #1d4ed8;
+    }
+    .badge.warn { background: #fef3c7; color: #92400e; }
+    .badge.source { background: #f3f4f6; color: #444; }
+    .sub-line { color: #555; font-size: 0.85rem; margin-top: 4px; }
+    .segments { margin-top: 8px; border-top: 1px dashed #ddd; padding-top: 8px; }
+    .segment { font-size: 0.9rem; padding: 2px 0; }
+    .segment .time { font-weight: 600; }
+    .segment .muted { color: #777; }
+    .leg-divider { font-size: 0.75rem; color: #999; margin: 6px 0 2px; }
+    .fare-policy { font-size: 0.8rem; color: #555; margin-top: 8px; }
+    .fare-policy .ok { color: #059669; }
+    .fare-policy .no { color: #b91c1c; }
     .back { display: inline-block; margin-top: 20px; color: #2563eb; text-decoration: none; }
     .error { color: #b91c1c; background: #fee2e2; padding: 8px 12px; border-radius: 4px; margin-top: 16px; }
     .empty { color: #666; }
@@ -25,21 +41,49 @@
   </p>
 
   {% if offers %}
-  <table>
-    <thead>
-      <tr><th>價格</th><th>航空公司</th><th>航段</th><th>來源</th></tr>
-    </thead>
-    <tbody>
-      {% for offer in offers %}
-      <tr class="{{ 'cheapest' if offer == cheapest else '' }}">
-        <td class="price">{{ "%.0f"|format(offer.price) }} {{ offer.currency }}</td>
-        <td>{{ offer.carriers | join(", ") }}</td>
-        <td>{{ offer.summary.split("  ")[-1] }}</td>
-        <td>{{ offer.provider }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% for offer in offers %}
+    {% set stops = offer.stop_count if offer.stop_count is not none else offer.stops %}
+    <div class="offer {{ 'cheapest' if offer == cheapest else '' }}">
+      <div class="offer-header">
+        <span class="price">{{ "%.0f"|format(offer.price) }} {{ offer.currency }}</span>
+        <div class="badges">
+          {% for tag in offer.tags %}<span class="badge">{{ tag | tag_fmt }}</span>{% endfor %}
+          {% if offer.self_transfer %}<span class="badge warn">⚠️ 需自行轉機</span>{% endif %}
+          <span class="badge source">{{ offer.provider }}</span>
+        </div>
+      </div>
+      <div class="sub-line">
+        {{ offer.carriers | join(", ") }}
+        ・飛行時間 {{ offer.duration_minutes | duration_fmt }}
+        ・{{ "直飛" if stops == 0 else "轉機 " ~ stops ~ " 次" }}
+        {% if offer.eco_delta_pct %}・碳排放比最環保選項多 {{ "%.0f"|format(offer.eco_delta_pct) }}%{% endif %}
+      </div>
+
+      <div class="segments">
+        {% set ns = namespace(shown_return=false) %}
+        {% for seg in offer.segments %}
+          {% if query.return_date and seg.departure.startswith(query.return_date) and not ns.shown_return %}
+            <div class="leg-divider">— 回程 —</div>
+            {% set ns.shown_return = true %}
+          {% endif %}
+          <div class="segment">
+            <span class="time">{{ seg.departure | time_fmt }}</span> {{ seg.origin }}
+            → <span class="time">{{ seg.arrival | time_fmt }}</span> {{ seg.destination }}
+            <span class="muted">・{{ seg.carrier }} {{ seg.flight_number }}</span>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if offer.fare_policy %}
+      <div class="fare-policy">
+        退改簽：
+        <span class="{{ 'ok' if offer.fare_policy.changeAllowed else 'no' }}">{{ "可改票" if offer.fare_policy.changeAllowed else "不可改票" }}</span>
+        ・<span class="{{ 'ok' if offer.fare_policy.cancellationAllowed else 'no' }}">{{ "可取消" if offer.fare_policy.cancellationAllowed else "不可取消" }}</span>
+        ・<span class="{{ 'ok' if offer.fare_policy.partiallyRefundable else 'no' }}">{{ "可部分退款" if offer.fare_policy.partiallyRefundable else "不可退款" }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
   {% else %}
   <p class="empty">沒有找到符合條件的航班。</p>
   {% endif %}
