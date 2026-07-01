@@ -48,6 +48,10 @@ python -m flightprice web
 
 開啟 <http://127.0.0.1:5000/>，填表單送出即可看到比價結果（只在本機開放，不對外）。
 
+出發地/目的地欄位支援輸入城市中文名稱（常用城市，如「台北」「東京」）、英文名稱或 IATA 代碼自動完成，
+這部分是純離線比對（`flightprice/data/airports.json` + `city_aliases_zh.json`），不會呼叫 Skyscanner API，
+不消耗免費額度。
+
 ## 定時監控 + 降價通知
 
 1. 複製設定檔並填入你要盯的航線與目標價：

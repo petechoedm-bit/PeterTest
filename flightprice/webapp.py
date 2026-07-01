@@ -5,7 +5,10 @@ Run with ``python -m flightprice web`` and open http://127.0.0.1:5000/.
 
 from __future__ import annotations
 
-from flask import Flask, render_template, request
+import json
+from pathlib import Path
+
+from flask import Flask, jsonify, render_template, request
 
 from .compare import compare
 from .config import load_dotenv
@@ -13,6 +16,17 @@ from .models import SearchQuery
 from .providers import build_providers
 
 app = Flask(__name__)
+
+_DATA_DIR = Path(__file__).parent / "data"
+_AIRPORTS = json.loads((_DATA_DIR / "airports.json").read_text(encoding="utf-8"))
+_CITY_ALIASES_ZH = json.loads((_DATA_DIR / "city_aliases_zh.json").read_text(encoding="utf-8"))
+
+
+@app.route("/airports.json")
+def airports_json():
+    # Offline airport lookup for the origin/destination autocomplete — no
+    # RapidAPI calls, so it doesn't touch the Skyscanner free-tier quota.
+    return jsonify({"airports": _AIRPORTS, "aliases_zh": _CITY_ALIASES_ZH})
 
 
 @app.route("/", methods=["GET", "POST"])
